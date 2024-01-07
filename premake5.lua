@@ -1,21 +1,35 @@
 workspace "JobSearchTracker"
+    architecture "x86_64"
+    startproject "JobSearchTracker"
     configurations { "Debug", "Release" }
+    flags { "MultiProcessorCompile" }
 
 project "TrackerCommon"
+    location "TrackerCommon"
     kind "StaticLib"
     language "C++"
+    cppdialect "C++20"
     targetdir "bin/%{cfg.buildcfg}"
     
-    files { "common/**.h", "common/**.cpp" }
+    files {
+        "%{prj.name}/**.h",
+        "%{prj.name}/**.cpp"
+    }
 
 project "JobSearchTracker"
+    location "JobSearchTracker"
     kind "ConsoleApp"
     language "C++"
+    cppdialect "C++20"
     targetdir "bin/%{cfg.buildcfg}"
     
-    files { "tracker/**.h", "tracker/**.cpp" }
+    files {
+        "%{prj.name}/**.h",
+        "%{prj.name}/**.cpp"
+    }
 
     links { "TrackerCommon" }
+    includedirs { "." }
 
     filter "configurations:Debug"
         defines { "DEBUG" }
@@ -32,13 +46,19 @@ project "JobSearchTracker"
         includedirs { "/usr/local/include" }
     
 project "TrackingExporter"
+    location "TrackingExporter"
     kind "ConsoleApp"
     language "C++"
+    cppdialect "C++20"
     targetdir "bin/%{cfg.buildcfg}"
     
-    files { "exporter/**.h", "exporter/**.cpp" }
+    files {
+        "%{prj.name}/**.h",
+        "%{prj.name}/**.cpp"
+    }
 
     links { "TrackerCommon" }
+    includedirs { "." }
 
     filter "configurations:Debug"
         defines { "DEBUG" }
