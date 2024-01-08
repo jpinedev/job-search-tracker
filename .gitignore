@@ -43,3 +43,9 @@ Makefile
 *.sln
 *.vcxproj
 *.vcxproj.user
+
+# Clangd language server
+compile_commands/
+compile_commands.json
+
+.cache/

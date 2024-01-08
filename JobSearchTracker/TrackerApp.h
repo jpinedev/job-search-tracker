@@ -1,6 +1,8 @@
 #pragma once
 #include <iostream>
 
+#include "TrackerCommon/Tracker.h"
+
 class TrackerApp
 {
 public:
