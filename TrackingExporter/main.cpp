@@ -1,9 +1,11 @@
 #include <string>
 #include <iostream>
-#include "TrackerCommon/Tracker.h"
+#include "TrackerCommon/Logger.h"
 
 int main(int argc, char** argv)
 {
-    PrintMSG();
+    Logger logger;
+    logger.LogMessage("Hello");
+    logger.LogError("World");
     return 0;
 }

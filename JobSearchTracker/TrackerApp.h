@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 
-#include "TrackerCommon/Tracker.h"
+#include "TrackerCommon/CompaniesDatabase.h"
 
 class TrackerApp
 {
