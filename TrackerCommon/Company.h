@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <tuple>
 
 #include "InterestLevel.h"
 #include "JobListing.h"
@@ -9,7 +10,12 @@
 class Company
 {
 public:
+    typedef std::tuple<std::string, std::string> Schema_t;
+    // typedef std::tuple<std::string, std::string, InterestLevel> Schema_t;
+
     Company(std::string name, std::string url);
+
+    static Company FromSchema(const Schema_t& tableEntry);
 
     const std::string& GetName() const;
     const std::vector<JobListing>& GetListings() const;

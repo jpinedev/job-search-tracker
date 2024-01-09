@@ -2,12 +2,13 @@
 #include "Company.h"
 #include "JobListing.h"
 
+template<typename T>
 class CSVParser;
 
 class CompaniesDatabase
 {
 public:
-    // CompaniesDatabase(CSVParser& parser);
+    CompaniesDatabase(CSVParser<Company::Schema_t>& parser);
 
     Company& AddCompany(std::string name, std::string careersPageUrl);
 

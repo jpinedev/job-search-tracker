@@ -1,7 +1,9 @@
 #pragma once
 #include <iostream>
 
+#include "TrackerCommon/CSVParser.h"
 #include "TrackerCommon/CompaniesDatabase.h"
+#include "TrackerCommon/Company.h"
 
 class TrackerApp
 {
@@ -19,6 +21,7 @@ private:
     std::istream& mIn;
     std::ostream& mOut;
 
-    // Tracker mTracker;
+    CSVParser<Company::Schema_t> mCompaniesParser;
+    CompaniesDatabase mDatabase;
 
 };
