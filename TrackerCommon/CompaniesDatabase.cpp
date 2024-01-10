@@ -5,11 +5,8 @@
 
 CompaniesDatabase::CompaniesDatabase(CSVParser<Company::Schema_t>& parser)
 {
-    auto companyFieldsOpt = parser.GetNextRow();
     Logger logger;
-    logger.LogMessage("CompaniesDatabase", companyFieldsOpt.has_value() ? "Row parsed successfully" : "Row could not be parsed");
-
-    if (companyFieldsOpt.has_value())
+    for (auto companyFieldsOpt = parser.GetNextRow(); companyFieldsOpt.has_value(); companyFieldsOpt = parser.GetNextRow())
     {
         auto& companyFields = companyFieldsOpt.value();
         logger.LogMessage("CompaniesDatabase", "Name: " + std::get<0>(companyFields) + "; URL: " + std::get<1>(companyFields) + "; InterestLevel: " + std::to_string(std::get<2>(companyFields)));
