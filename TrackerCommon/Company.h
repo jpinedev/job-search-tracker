@@ -10,10 +10,10 @@
 class Company
 {
 public:
-    typedef std::tuple<std::string, std::string> Schema_t;
-    // typedef std::tuple<std::string, std::string, InterestLevel> Schema_t;
+    typedef std::tuple<std::string, std::string, InterestLevel> Schema_t;
 
     Company(std::string name, std::string url);
+    Company(Schema_t values);
 
     static Company FromSchema(const Schema_t& tableEntry);
 

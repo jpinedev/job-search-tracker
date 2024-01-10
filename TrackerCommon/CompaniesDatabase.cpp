@@ -12,7 +12,7 @@ CompaniesDatabase::CompaniesDatabase(CSVParser<Company::Schema_t>& parser)
     if (companyFieldsOpt.has_value())
     {
         auto& companyFields = companyFieldsOpt.value();
-        logger.LogMessage("CompaniesDatabase", "Name: " + std::get<0>(companyFields) + "; URL: " + std::get<1>(companyFields));
+        logger.LogMessage("CompaniesDatabase", "Name: " + std::get<0>(companyFields) + "; URL: " + std::get<1>(companyFields) + "; InterestLevel: " + std::to_string(std::get<2>(companyFields)));
     }
 }
 
