@@ -93,7 +93,8 @@ std::optional<Schema_t> CSVParser<Schema_t>::GetNextRow()
     }
     catch (std::runtime_error& e)
     {
-        logger.LogError("CSVParser", std::string("Unable to parse row:\n\t") + e.what());
+        std::size_t lineNum = currentRow - allRowsInFile.begin() - 1;
+        logger.LogError("CSVParser", "Unable to parse row '" + std::to_string(lineNum) + "':\n\t" + e.what());
         return {};
     }
 }
@@ -135,6 +136,16 @@ void TryGetAndSet(std::istream& rowIn, TupleLike& tuple)
         try
         {
             cellAsStream >> element;
+            if (cellAsStream.bad())
+            {
+                throw std::runtime_error("Bad input");
+            }
+
+            std::ws(cellAsStream);
+            if (!cellAsStream.eof())
+            {
+                throw std::runtime_error("Expected type '" + std::string(typeid(ElementType).name()) + "'");
+            }
         }
         catch (std::runtime_error& e)
         {
@@ -170,7 +181,7 @@ Schema_t CSVParser<Schema_t>::ParseRow(std::vector<std::string>::const_iterator 
     if (row->empty())
     {
         std::size_t lineNum = row - allRowsInFile.begin();
-        throw std::runtime_error("Unexpected empty line at line '" + std::to_string(lineNum) + "'");
+        throw std::runtime_error("Unexpected empty line");
     }
 
     Schema_t values;
