@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <istream>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -19,7 +20,7 @@ class CSVParser
 public:
     CSVParser(std::istream& csvIn);
     /// @throws if file cannot be opened
-    CSVParser(const std::string& filePath);
+    static CSVParser FromFile(const std::string& filePath);
 
     /// Get the next row in the CSV table.
     /// @returns empty if there are no more rows, or the row does not fit the schema
@@ -32,41 +33,69 @@ public:
     const std::vector<std::string>& GetTitleRow() const;
 
 private:
-    /// If the first row is a title row, the titles will be stored in `titles`.
-    /// @returns false if the first row in the table matches the schema
-    bool TryParseTitleRow();
+    typedef std::array<std::string, std::tuple_size<Schema_t>{}> ColumnTitles;
 
-    /// Stores the next row into `nextRow` if the row can be parsed.
-    /// @returns false if there are no more rows, or the row does not fit the schema
-    bool TryParseNextRow(); 
+    /// Parse the first row in the table as a title row.
+    /// @modifies `hasTitleRow` when the csv file has a valid title row
+    /// @returns empty if the first row in the table matches the schema
+    ColumnTitles ParseTitleRow();
 
-    std::ifstream infile;
-    std::istream& csvIn;
-    std::vector<std::string> titles;
-    std::optional<Schema_t> nextRow;
+    /// Parse a row according to the schema.
+    /// @throws if there are no more rows, or the row does not fit the schema
+    Schema_t ParseRow(std::vector<std::string>::const_iterator row) const;
+
+    const std::vector<std::string> allRowsInFile;
+    std::vector<std::string>::const_iterator currentRow;
+
+    const ColumnTitles titles;
     bool hasTitleRow{false};
 
 };
 
-
-template<class Schema_t>
-CSVParser<Schema_t>::CSVParser(std::istream& csvIn) : csvIn(csvIn)
+inline std::vector<std::string> GetAllLines(std::istream& in)
 {
-    hasTitleRow = TryParseTitleRow();
+    std::vector<std::string> lines;
+
+    std::string line;
+    while (std::getline(in, line))
+    {
+        lines.push_back(line);
+    }
+    return lines;
 }
 
 template<class Schema_t>
-CSVParser<Schema_t>::CSVParser(const std::string& filePath) : infile(filePath), csvIn(infile)
+CSVParser<Schema_t>::CSVParser(std::istream& csvIn) : allRowsInFile(GetAllLines(csvIn)), titles(ParseTitleRow())
 {
-    hasTitleRow = TryParseTitleRow();
+    currentRow = allRowsInFile.begin();
+}
+
+template<class Schema_t>
+CSVParser<Schema_t> CSVParser<Schema_t>::FromFile(const std::string& filePath)
+{
+    std::ifstream infile(filePath);
+    return CSVParser<Schema_t>(infile);
 }
 
 template<class Schema_t>
 std::optional<Schema_t> CSVParser<Schema_t>::GetNextRow()
 {
-    auto ret = nextRow;
-    TryParseNextRow();
-    return ret;
+    Logger logger;
+    if (currentRow == allRowsInFile.end())
+    {
+        logger.LogMessage("CSVParser", "Reached end of file, no more rows to parse.");
+        return {};
+    }
+
+    try
+    {
+        return ParseRow(currentRow++);
+    }
+    catch (std::runtime_error& e)
+    {
+        logger.LogError("CSVParser", std::string("Unable to parse row:\n\t") + e.what());
+        return {};
+    }
 }
 
 template<class Schema_t>
@@ -79,21 +108,20 @@ const std::vector<std::string>& CSVParser<Schema_t>::GetTitleRow() const
 }
 
 template<class Schema_t>
-bool CSVParser<Schema_t>::TryParseTitleRow()
+CSVParser<Schema_t>::ColumnTitles CSVParser<Schema_t>::ParseTitleRow()
 {
-    TryParseNextRow();
-    return false;
+    return {};
 }
 
 template<typename TupleLike, std::size_t I>
-void TryGetAndSet(std::istream& csvIn, TupleLike& tuple)
+void TryGetAndSet(std::istream& rowIn, TupleLike& tuple)
 {
-    std::ws(csvIn);
+    std::ws(rowIn);
 
     auto& element = std::get<I>(tuple);
     std::string cell;
-    if (!std::getline(csvIn, cell, ','))
-        throw std::runtime_error("Unable to parse CSV cell");
+    if (rowIn.eof() || !std::getline(rowIn, cell, ','))
+        throw std::runtime_error("Unable to read CSV cell '" + std::to_string(I) + "'");
 
     using ElementType = std::tuple_element_t<I, TupleLike>;
 
@@ -110,21 +138,13 @@ void TryGetAndSet(std::istream& csvIn, TupleLike& tuple)
         }
         catch (std::runtime_error& e)
         {
-            throw std::runtime_error("Could not parse element '" + std::to_string(I) + "' in row.\n\t" + e.what());
+            throw std::runtime_error("Could not parse cell '" + std::to_string(I) + "' in row.\n\t" + e.what());
         }
     }
-    
-    // if constexpr (I < std::tuple_size<TupleLike>{})
-    // {
-    //     char comma;
-    //     csvIn >> comma;
-    //     if (comma != ',')
-    //         throw std::runtime_error("Could not parse element '" + std::to_string(I) + "' in row.");
-    // }
 
     if constexpr (I + 1 == std::tuple_size<TupleLike>{})
     {
-        if (!csvIn.eof())
+        if (!rowIn.eof())
             throw std::runtime_error("Row has too many elements for the schema.");
     }
 }
@@ -140,39 +160,23 @@ void ParseTuple(std::istream& csvIn, TupleLike& tuple)
 }
 
 template<class Schema_t>
-bool CSVParser<Schema_t>::TryParseNextRow()
+Schema_t CSVParser<Schema_t>::ParseRow(std::vector<std::string>::const_iterator row) const
 {
-    Logger logger;
-    if (csvIn.bad() || csvIn.eof())
+    if (row == allRowsInFile.end())
     {
-        logger.LogMessage("CSVParser", "No more rows.");
-        return false;
+        throw std::runtime_error("No more rows.");
+    }
+
+    if (row->empty())
+    {
+        std::size_t lineNum = row - allRowsInFile.begin();
+        throw std::runtime_error("Unexpected empty line at line '" + std::to_string(lineNum) + "'");
     }
 
     Schema_t values;
 
-    std::string row;
-    if (!std::getline(csvIn, row))
-    {
-        logger.LogError("CSVParser", "Could not read in row");
-        return false;
-    }
+    std::stringstream rowIn(*row);
+    ParseTuple<Schema_t>(rowIn, values);
 
-    std::stringstream rowIn(row);
-    try
-    {
-        ParseTuple<Schema_t>(rowIn, values);
-    }
-    catch (std::runtime_error& e)
-    {
-        nextRow.reset();
-        logger.LogError("CSVParser", e.what());
-        return false;
-    }
-
-    nextRow = values;
-    return true;
+    return values;
 }
-
-// template<class Schema_t>
-// CSVParser<Schema_t>::
